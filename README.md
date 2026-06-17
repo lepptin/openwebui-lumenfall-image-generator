@@ -113,7 +113,7 @@ from pydantic import BaseModel, Field
 class Tools:
     class Valves(BaseModel):
         LUMENFALL_API_KEY: str = Field(
-            default="", description="Lumenfall.ai API anahtarınız (sk- ile başlar)"
+            default="", description="Your Lumenfall.ai API key"
         )
         LUMENFALL_API_BASE_URL: str = Field(
             default="https://api.lumenfall.ai/openai/v1",
@@ -146,7 +146,7 @@ class Tools:
             await __event_emitter__(
                 {
                     "data": {
-                        "description": "Lumenfall ile görsel oluşturuluyor...",
+                        "description": "Generating image with Lumenfall...",
                         "status": "in_progress",
                         "done": False,
                     },
@@ -154,11 +154,11 @@ class Tools:
                 }
             )
 
-        # API Anahtarı kontrolü
+        # API Key check
         if not self.valves.LUMENFALL_API_KEY:
-            return "❌ Hata: Lumenfall API Key ayarlanmamış. Tool'un Valves kısmından API anahtarını girin."
+            return "❌ Error: Lumenfall API Key is not set. Please enter your API key in the Tool's Valves section."
 
-        # API URL'si
+        # API URL
         base_url = self.valves.LUMENFALL_API_BASE_URL.rstrip("/")
         url = f"{base_url}/images/generations"
 
@@ -170,7 +170,7 @@ class Tools:
         payload = {"model": model, "prompt": prompt, "n": 1, "size": size}
 
         try:
-            # Asenkron olarak API isteği gönder
+            # Send API request asynchronously
             response = await asyncio.to_thread(
                 requests.post, url, headers=headers, json=payload, timeout=90
             )
@@ -178,31 +178,31 @@ class Tools:
             data = response.json()
 
             if data.get("data") and len(data["data"]) > 0:
-                # URL'yi veya base64 verisini al
+                # Get the URL or base64 data
                 image_url = data["data"][0].get("url")
                 if not image_url:
                     b64 = data["data"][0].get("b64_json")
                     if b64:
                         image_url = f"data:image/png;base64,{b64}"
                     else:
-                        return "❌ Hata: API yanıtında resim URL'si veya base64 verisi bulunamadı."
+                        return "❌ Error: No image URL or base64 data found in the API response."
 
                 if __event_emitter__:
                     await __event_emitter__(
                         {
                             "data": {
-                                "description": "Görsel başarıyla oluşturuldu! 🎨",
+                                "description": "Image successfully created! 🎨",
                                 "status": "complete",
                                 "done": True,
                             },
                             "type": "status",
                         }
                     )
-                # Markdown formatında döndür
+                # Return in Markdown format
                 return f"![Generated Image]({image_url})"
 
             else:
-                return f"❌ Hata: Beklenmeyen API yanıtı: {data}"
+                return f"❌ Error: Unexpected API response: {data}"
 
         except requests.exceptions.RequestException as e:
             error_body = e.response.text if e.response else str(e)
@@ -210,27 +210,27 @@ class Tools:
                 await __event_emitter__(
                     {
                         "data": {
-                            "description": f"API Hatası: {error_body}",
+                            "description": f"API Error: {error_body}",
                             "status": "complete",
                             "done": True,
                         },
                         "type": "status",
                     }
                 )
-            return f"❌ Lumenfall API çağrısı başarısız: {error_body}"
+            return f"❌ Lumenfall API call failed: {error_body}"
         except Exception as e:
             if __event_emitter__:
                 await __event_emitter__(
                     {
                         "data": {
-                            "description": f"Beklenmeyen hata: {str(e)}",
+                            "description": f"Unexpected error: {str(e)}",
                             "status": "complete",
                             "done": True,
                         },
                         "type": "status",
                     }
                 )
-            return f"❌ Beklenmeyen bir hata oluştu: {str(e)}"
+            return f"❌ An unexpected error occurred: {str(e)}"
 
 </details>
 
